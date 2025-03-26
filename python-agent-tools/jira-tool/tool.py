@@ -206,9 +206,9 @@ class JiraTool(BaseAgentTool):
 
     def get_issue_by_key(self, args):
         logger.debug("Starting 'get_issue_by_key' action.")
-        if "issue_key" not in args:
-            logger.error("Missing required field: issue_key")
-            raise ValueError("Missing required field: issue_key")
+        if "issue_key" not in args or "reporter" not in args:
+            logger.error("Missing required fields: issue_key or reporter")
+            raise ValueError("Missing required fields: issue_key or reporter")
 
         try:
             logger.debug(f"Fetching issue with key: {args['issue_key']}")
@@ -221,6 +221,16 @@ class JiraTool(BaseAgentTool):
             summary = issue["fields"]["summary"]
             status = issue["fields"]["status"]["name"]
             priority = issue["fields"]["priority"]["name"]
+
+            # Find the accountId of the provided reporter email
+            reporter_email = args["reporter"]
+            provided_reporter_account_id = self.find_user_account_id(reporter_email)
+            logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
+
+            # Verify the reporter
+            if reporter_account_id != provided_reporter_account_id:
+                logger.error("Provided reporter does not match the reporter in the issue.")
+                raise ValueError("Provided reporter does not match the reporter in the issue.")
 
             return {
                 "output": {
@@ -382,4 +392,3 @@ class JiraTool(BaseAgentTool):
             logger.error(f"Error retrieving issues for reporter {reporter_email}: {str(e)}")
             raise
 
-    
