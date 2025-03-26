@@ -157,6 +157,20 @@ class JiraTool(BaseAgentTool):
                 logger.error(f"Missing required field: {field}")
                 raise ValueError(f"Missing required field: {field}")
 
+        # Validate the  priority value
+        valid_priority_priorities = ["Lowest", "Low", "Medium", "High", "Highest"]
+        priority = args["priority"]
+        if priority not in valid_priority_priorities:
+            logger.error(f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}")
+            raise ValueError(f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}")
+        
+        # Validate the  priority value
+        valid_issuetype_priorities = self.issue_types
+        issuetype = args["issuetype"]
+        if issuetype not in valid_issuetype_priorities:
+            logger.error(f"Invalid priority value: {issuetype}. Must be one of {valid_issuetype_priorities}")
+            raise ValueError(f"Invalid priority value: {issuetype}. Must be one of {valid_issuetype_priorities}")
+
         # Find the accountId of the reporter using their email
         reporter_email = args["reporter"]
         reporter_account_id = self.find_user_account_id(reporter_email)
