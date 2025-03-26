@@ -1,0 +1,45 @@
+{
+    "id": "jira-tool",
+    "meta": {
+        "icon": "fas fa-phone",
+        "label": "Interact with Jira Issues"
+    },
+    "params": [
+        {
+            "name": "jira_api_connection",
+            "label": "Jira API Connection",
+            "type": "PRESET",
+            "parameterSetId": "jira-api-connection"
+        },
+        {
+            "name": "logging_level",
+            "label": "logging level",
+            "type": "SELECT",
+            "description": "The level of logging that the tool generates",
+            "mandatory": true,
+            "selectChoices": [
+                {
+                    "value": "DEBUG",
+                    "label": "DEBUG"
+                },
+                {
+                    "value": "INFO",
+                    "label": "INFO"
+                },
+                {
+                    "value": "WARNING",
+                    "label": "WARNING"
+                },
+                {
+                    "value": "ERROR",
+                    "label": "ERROR"
+                },
+                {
+                    "value": "CRITICAL",
+                    "label": "CRITICAL"
+                }
+            ],
+            "defaultValue": "INFO"
+        }
+    ]
+}

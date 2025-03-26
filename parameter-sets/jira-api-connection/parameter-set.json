@@ -1,0 +1,62 @@
+{
+    "meta": {
+        "label": "Jira API Connection",
+        "description": "Jira API connection",
+        "icon": "icon-ticket"
+    },
+    "defaultDefinableInline": true,
+    "defaultDefinableAtProjectLevel": true,
+    "pluginParams": [],
+    "params": [
+        {
+            "name": "jira_username",
+            "label": "Jira Username",
+            "type": "STRING",
+            "mandatory": true,
+            "description": ""
+        },
+        {
+            "name": "jira_api_token",
+            "label": "Jira API Token",
+            "type": "PASSWORD",
+            "mandatory": true,
+            "description": "For the user"
+        },
+        {
+            "name": "jira_instance_url",
+            "label": "Jira Instance URL",
+            "type": "STRING",
+            "mandatory": true,
+            "description": "e.g. https://YOUR_ORGANIZATION.atlassian.net"
+        },
+        {
+            "name": "jira_project_key",
+            "label": "Jira Project Key",
+            "type": "STRING",
+            "mandatory": true,
+            "description": ""
+        },
+        {
+            "name": "jira_cloud",
+            "label": "Jira Cloud",
+            "type": "BOOLEAN",
+            "mandatory": true,
+            "description": "",
+            "defaultValue": true
+        },
+        {
+            "name": "issue_types",
+            "label": "Issue Types",
+            "type": "STRINGS",
+            "mandatory": true,
+            "description": "A list of allowed issue types",
+            "defaultValue": [
+                "Email Request",
+                "Report an incident",
+                "Problem",
+                "Get IT help",
+                "Request a change"
+            ]
+        }
+    ]
+}

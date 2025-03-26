@@ -3,7 +3,7 @@
     "id": "jira-tool",
 
     // It is highly recommended to use Semantic Versioning
-    "version": "0.0.1",
+    "version": "0.1.0",
 
     // Meta data for display purposes:
     "meta": {
@@ -16,7 +16,7 @@
         "author": "johnson.zhang",
 
         // icon: must be one of the FontAwesome 5.15.4 icons, complete list here at https://fontawesome.com/v5/docs/
-        "icon": "fas fa-puzzle-piece",
+        "icon": "fas fa-phone",
 
         // List of tags for filtering the list of plugins
         "tags": [], //for example: ["Machine Learning", "NLP"]
