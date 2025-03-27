@@ -175,8 +175,8 @@ class JiraTool(BaseAgentTool):
         reporter_email = args["reporter"]
         reporter_account_id = self.find_user_account_id(reporter_email)
 
-        # Use the provided issuetype or default to 'Task'
-        issuetype = args.get("issuetype", "Task")
+        # Use the provided issuetype or default to 'Email request'
+        issuetype = args.get("issuetype", "Email request")
 
         # Simplified issue_data structure
         issue_data = {
