@@ -1,0 +1,65 @@
+{
+    // Meta data for display purposes
+    "meta": {
+        // label: name of the recipe as displayed, should be short
+        "label": "Jira issues fetcher",
+        // description: longer string to help end users understand what this recipe does
+        "description": "Fetches Jira issues data using API and saves it to a dataset",
+        "icon": "fas fa-headset"
+    },
+
+    "kind": "PYTHON",
+    
+    "inputRoles": [],
+
+    "outputRoles": [
+        {
+            "name": "data_output",
+            "label": "Ticket Data Output",
+            "description": "Dataset where the ticket data will be stored",
+            "arity": "UNARY",
+            "required": true,
+            "acceptsDataset": true
+        }
+    ],
+
+    "params": [
+        {
+            "name": "jira_api_connection",
+            "label": "Jira API Connection",
+            "type": "PRESET",
+            "parameterSetId": "jira-api-connection"
+        },
+        {
+            "name": "issue_statuses",
+            "label": "Issue Statuses",
+            "type": "MULTISELECT",
+            "description": "Statuses of the Issues to fetch",
+            "mandatory": true,
+            "selectChoices" : [
+            { "value": "Open", "label": "Open"},
+            { "value": "Resolved", "label": "Resolved"},
+            { "value": "Canceled", "label": "Canceled"},
+            { "value": "Closed", "label": "Closed"}
+            ],
+            "defaultValue": ["Resolved"]
+        },
+        {
+            "name": "logging_level",
+            "label": "logging level",
+            "type": "SELECT",
+            "description": "The level of logging that the recipe generates",
+            "mandatory": true,
+            "selectChoices" : [
+                { "value": "DEBUG", "label": "DEBUG"},
+                { "value": "INFO", "label": "INFO"},
+                { "value": "WARNING", "label": "WARNING"},
+                { "value": "ERROR", "label": "ERROR"},
+                { "value": "CRITICAL", "label": "CRITICAL"}
+            ],
+            "defaultValue": "INFO"
+        }
+    ],
+    "resourceKeys": []
+
+}
