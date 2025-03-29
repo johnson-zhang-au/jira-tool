@@ -285,7 +285,8 @@ class JiraTool(BaseAgentTool):
                 "output": {
                     "message": "Issue closed successfully",
                     "issue_key": issue_key,
-                    "url": f"{self.jira_instance_url}/browse/{issue_key}"
+                    "url": f"{self.jira_instance_url}/browse/{issue_key}",
+                    "issue": issue
                 }
             }
         except Exception as e:
