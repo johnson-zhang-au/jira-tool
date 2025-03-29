@@ -333,7 +333,7 @@ class JiraTool(BaseAgentTool):
             # Update the priority
             logger.debug(f"Updating priority for issue key: {args['issue_key']} to {new_priority}")
             priority_data = {"priority": {"name": new_priority}}
-            self.jira.issue_update(args["issue_key"], priority_data)
+            issue = self.jira.issue_update(args["issue_key"], priority_data)
             logger.info(f"Issue priority updated successfully: {args['issue_key']}")
 
             # Add a comment indicating the activity was done on behalf of the reporter
@@ -344,6 +344,13 @@ class JiraTool(BaseAgentTool):
             return {
                 "output": {
                     "message": "Issue priority updated successfully"
+                    "issue_key": issue["key"],
+                    "url": f"{self.jira_instance_url}/browse/{issue['key']}",
+                    "reporter_display_name": reporter_display_name,
+                    "summary": summary,
+                    "status": status,
+                    "priority": priority,
+                    "issue": issue
                 }
             }
         except Exception as e:
