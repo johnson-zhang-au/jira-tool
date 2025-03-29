@@ -277,12 +277,16 @@ class JiraTool(BaseAgentTool):
 
             # Add a comment indicating the activity was done on behalf of the reporter
             comment = f"Issue closed on behalf of the reporter {reporter_email}."
-            self.jira.issue_add_comment(args["issue_key"], comment)
+            issue = self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
+            issue_key = args["issue_key"]
 
             return {
                 "output": {
-                    "message": "Issue closed successfully"
+                    "message": "Issue closed successfully",
+                    "issue_key": issue_key,
+                    "url": f"{self.jira_instance_url}/browse/{issue_key}",
+                    "priority": new_priority,
                 }
             }
         except Exception as e:
@@ -340,12 +344,13 @@ class JiraTool(BaseAgentTool):
             comment = f"Priority updated to {new_priority} on behalf of the reporter {reporter_email}."
             issue = self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
+            issue_key = args["issue_key"]
 
             return {
                 "output": {
                     "message": "Issue priority updated successfully",
-                    "issue_key": args["issue_key"],
-                    "url": f"{self.jira_instance_url}/browse/{args["issue_key"]}",
+                    "issue_key": issue_key,
+                    "url": f"{self.jira_instance_url}/browse/{issue_key}",
                     "priority": new_priority,
                     "issue": issue
                 }
