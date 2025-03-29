@@ -272,12 +272,12 @@ class JiraTool(BaseAgentTool):
 
             # Close the issue
             logger.debug(f"Closing issue with key: {args['issue_key']}")
-            self.jira.set_issue_status(args["issue_key"], "Closed")
+            issue = self.jira.set_issue_status(args["issue_key"], "Closed")
             logger.info(f"Issue closed successfully: {args['issue_key']}")
 
             # Add a comment indicating the activity was done on behalf of the reporter
             comment = f"Issue closed on behalf of the reporter {reporter_email}."
-            issue = self.jira.issue_add_comment(args["issue_key"], comment)
+            self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
             issue_key = args["issue_key"]
 
@@ -285,8 +285,7 @@ class JiraTool(BaseAgentTool):
                 "output": {
                     "message": "Issue closed successfully",
                     "issue_key": issue_key,
-                    "url": f"{self.jira_instance_url}/browse/{issue_key}",
-                    "priority": new_priority,
+                    "url": f"{self.jira_instance_url}/browse/{issue_key}"
                 }
             }
         except Exception as e:
@@ -337,12 +336,12 @@ class JiraTool(BaseAgentTool):
             # Update the priority
             logger.debug(f"Updating priority for issue key: {args['issue_key']} to {new_priority}")
             priority_data = {"priority": {"name": new_priority}}
-            self.jira.issue_update(args["issue_key"], priority_data)
+            issue = self.jira.issue_update(args["issue_key"], priority_data)
             logger.info(f"Issue priority updated successfully: {args['issue_key']}")
 
             # Add a comment indicating the activity was done on behalf of the reporter
             comment = f"Priority updated to {new_priority} on behalf of the reporter {reporter_email}."
-            issue = self.jira.issue_add_comment(args["issue_key"], comment)
+            self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
             issue_key = args["issue_key"]
 
