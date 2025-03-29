@@ -344,12 +344,9 @@ class JiraTool(BaseAgentTool):
             return {
                 "output": {
                     "message": "Issue priority updated successfully",
-                    "issue_key": issue["key"],
-                    "url": f"{self.jira_instance_url}/browse/{issue['key']}",
-                    "reporter_display_name": reporter_display_name,
-                    "summary": summary,
-                    "status": status,
-                    "priority": priority,
+                    "issue_key": args["issue_key"],
+                    "url": f"{self.jira_instance_url}/browse/{args["issue_key"]}",
+                    "priority": new_priority,
                     "issue": issue
                 }
             }
