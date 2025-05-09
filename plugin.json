@@ -11,7 +11,7 @@
         "label": "Jira tool",
 
         // description: longer string to help end users understand what this plugin does
-        "description": "This plugin provides integration with Jira as an agent tool. Requires DSS 13.4 or above",
+        "description": "This plugin provides integration with Jira as an agent tool. Requires DSS 13.4 or above \n This plugin is developed and maintained by Dataiku community members and is not an official Dataiku plugin.",
 
         "author": "johnson.zhang@dataiku.com",
 
