@@ -51,7 +51,7 @@
             "mandatory": true,
             "description": "A list of allowed issue types",
             "defaultValue": [
-                "Email Request",
+                "Email request",
                 "Report an incident",
                 "Problem",
                 "Get IT help",
