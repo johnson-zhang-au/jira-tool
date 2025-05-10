@@ -140,8 +140,15 @@ class JiraTool(BaseAgentTool):
         try:
             users = self.jira.user_find_by_user_string(query=email, start=0, limit=1, include_inactive_users=False)
             if not users:
-                logger.error(f"No user found with email: {email}")
-                raise ValueError(f"No user found with email: {email}")
+                message = f"No user found with email: {email}"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message,
+                        "email": email
+                    }
+                }
             account_id = users[0]["accountId"]
             logger.debug(f"Found accountId for user with email {email}: {account_id}")
             
@@ -153,8 +160,15 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            logger.error(f"Error finding user with email {email}: {str(e)}")
-            raise ValueError(f"Failed to find user with email {email}: {str(e)}")
+            message = f"Failed to find user with email {email} -  error message: {str(e)}"
+            logger.error(message)
+            return {
+                    "output": {
+                        "status": "ko",
+                        "message": message,
+                        "email": email
+                    }
+                }
 
 
     def find_user_display_name_by_account_id(self, account_id):
@@ -195,19 +209,40 @@ class JiraTool(BaseAgentTool):
         valid_priority_priorities = ["Lowest", "Low", "Medium", "High", "Highest"]
         priority = args["priority"]
         if priority not in valid_priority_priorities:
-            logger.error(f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}")
-            raise ValueError(f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}")
+            message = f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}"
+            logger.error(message)
+            return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
         
         # Validate the  priority value
         valid_issuetype_priorities = self.issue_types
         issuetype = args["issuetype"]
         if issuetype not in valid_issuetype_priorities:
-            logger.error(f"Invalid priority value: {issuetype}. Must be one of {valid_issuetype_priorities}")
-            raise ValueError(f"Invalid priority value: {issuetype}. Must be one of {valid_issuetype_priorities}")
+            message = f"Invalid priority value: {issuetype}. Must be one of {valid_issuetype_priorities}"
+            logger.error(message)
+            return {
+                        "output": {
+                            "status": "ko",
+                            "message": message
+                        }
+                    }
 
         # Find the accountId of the reporter using their email
         reporter_email = args["reporter"]
-        reporter_account_id = self.find_user_account_id(reporter_email)
+        response = self.find_user_account_id(reporter_email)
+        if response.get("ouput",{}).get("status","ok"):
+            reporter_account_id = response["output"]["account_id"]
+        else:
+            return {
+                        "output": {
+                            "status": "ko",
+                            "message": response.get("ouput",{}).get("message", "There was a problem while trying to find the reporter's account ID before creating the issue...")
+                        }
+                    }
 
         # Use the provided issuetype or default to 'Email request'
         issuetype = args.get("issuetype", "Email request")
@@ -235,8 +270,14 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            logger.error(f"Error creating issue: {str(e)}")
-            raise
+            message = f"Error creating issue - error: {str(e)}"
+            logger.error(message)
+            return {
+                        "output": {
+                            "status": "ko",
+                            "message": message
+                        }
+                    }
 
     def get_issue_by_key(self, args):
         logger.debug("Starting 'get_issue_by_key' action.")
