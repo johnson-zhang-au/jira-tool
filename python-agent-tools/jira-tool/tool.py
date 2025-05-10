@@ -93,17 +93,38 @@ class JiraTool(BaseAgentTool):
 
         logger.info(f"Invoking action: {action}")
         logger.debug(f"Input arguments: {args}")
+        
+        # Log inputs and config to trace
+        trace.span["name"] = "JIRA_TOOL_CALL"
+        for key, value in args.items():
+            trace.inputs[key] = value
+        trace.attributes["config"] = self.config
 
         if action == "create_issue":
-            return self.create_issue(args)
+            result = self.create_issue(args)
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         elif action == "get_issue_by_key":
-            return self.get_issue_by_key(args)
+            result = self.get_issue_by_key(args)
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         elif action == "close_issue":  # Updated from "close_issue"
-            return self.close_issue(args)
+            result = self.close_issue(args)
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         elif action == "update_issue_priority":
-            return self.update_issue_priority(args)
+            result = self.update_issue_priority(args)
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         elif action == "get_issues_by_reporter":
-            return self.get_issues_by_reporter(args)
+            result = self.get_issues_by_reporter(args)
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         else:
             logger.error(f"Invalid action: {action}")
             raise ValueError(f"Invalid action: {action}")
@@ -123,7 +144,14 @@ class JiraTool(BaseAgentTool):
                 raise ValueError(f"No user found with email: {email}")
             account_id = users[0]["accountId"]
             logger.debug(f"Found accountId for user with email {email}: {account_id}")
-            return account_id
+            
+            return {
+                "output": {
+                    "message": "Found accountId for user with email {email}: {account_id}",
+                    "account_id": account_id,
+                    "email": email
+                }
+            }
         except Exception as e:
             logger.error(f"Error finding user with email {email}: {str(e)}")
             raise ValueError(f"Failed to find user with email {email}: {str(e)}")
@@ -144,7 +172,13 @@ class JiraTool(BaseAgentTool):
                 raise ValueError(f"No user found with accountId: {account_id}")
             display_name = users[0]["displayName"]
             logger.debug(f"Found display name for accountId {account_id}: {display_name}")
-            return display_name
+            return {
+                "output": {
+                    "message": "Found display name for accountId {account_id}: {display_name}",
+                    "account_id": account_id,
+                    "display_name": display_name
+                }
+            }
         except Exception as e:
             logger.error(f"Error finding user with accountId {account_id}: {str(e)}")
             raise ValueError(f"Failed to find user with accountId {account_id}: {str(e)}")
