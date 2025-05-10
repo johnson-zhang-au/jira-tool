@@ -295,15 +295,9 @@ class JiraTool(BaseAgentTool):
         # Find the accountId of the reporter using their email
         reporter_email = args["reporter"]
         response = self.find_user_account_id(reporter_email)
-        if response.get("ouput",{}).get("status","ko") == "ok":
-            reporter_account_id = response["output"]["account_id"]
-        else:
-            return {
-                        "output": {
-                            "status": "ko",
-                            "message": response.get("ouput",{}).get("message", "There was a problem while trying to find the reporter's account ID before creating the issue...")
-                        }
-                    }
+        if response["output"]["status"] == "ko":
+            return response
+        reporter_account_id = response["output"]["account_id"]
 
         # Use the provided issuetype or default to 'Email request'
         issuetype = args.get("issuetype", "Email request")
@@ -360,14 +354,20 @@ class JiraTool(BaseAgentTool):
 
             # Extract additional details
             reporter_account_id = issue["fields"]["reporter"]["accountId"]
-            reporter_display_name = self.find_user_display_name_by_account_id(reporter_account_id)
+            reporter_display_name_response = self.find_user_display_name_by_account_id(reporter_account_id)
+            if reporter_display_name_response["output"]["status"] == "ko":
+                return reporter_display_name_response
+            reporter_display_name = reporter_display_name_response["output"]["display_name"]
             summary = issue["fields"]["summary"]
             status = issue["fields"]["status"]["name"]
             priority = issue["fields"]["priority"]["name"]
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_account_id = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id(reporter_email)
+            if provided_reporter_response["output"]["status"] == "ko":
+                return provided_reporter_response
+            provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
 
             # Verify the reporter
@@ -395,7 +395,7 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            message = f"Error retrieving issue by key {args["issue_key"]}: {str(e)}"
+            message = f"Error retrieving issue by key {args['issue_key']}: {str(e)}"
             logger.error(message)
             return {
                 "output": {
@@ -424,7 +424,10 @@ class JiraTool(BaseAgentTool):
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_account_id = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id(reporter_email)
+            if provided_reporter_response["output"]["status"] == "ko":
+                return provided_reporter_response
+            provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
 
             # Verify the reporter
@@ -459,7 +462,7 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            message = f"Error closing issue {args["issue_key"]}: {str(e)}"
+            message = f"Error closing issue {args['issue_key']}: {str(e)}"
             logger.error(message)
             return {
                 "output": {
@@ -501,7 +504,10 @@ class JiraTool(BaseAgentTool):
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_account_id = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id(reporter_email)
+            if provided_reporter_response["output"]["status"] == "ko":
+                return provided_reporter_response
+            provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
 
             # Verify the reporter
@@ -551,7 +557,7 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            message = f"Error updating issue {args["issue_key"]} priority: {str(e)}"
+            message = f"Error updating issue {args['issue_key']} priority: {str(e)}"
             logger.error(message)
             return {
                 "output": {
@@ -575,7 +581,10 @@ class JiraTool(BaseAgentTool):
         try:
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            reporter_account_id = self.find_user_account_id(reporter_email)
+            reporter_response = self.find_user_account_id(reporter_email)
+            if reporter_response["output"]["status"] == "ko":
+                return reporter_response
+            reporter_account_id = reporter_response["output"]["account_id"]
             logger.debug(f"Found accountId for reporter {reporter_email}: {reporter_account_id}")
 
             # Search for issues reported by the user
@@ -588,7 +597,10 @@ class JiraTool(BaseAgentTool):
             formatted_issues = []
             for issue in issues:
                 reporter_account_id = issue["fields"]["reporter"]["accountId"]
-                reporter_display_name = self.find_user_display_name_by_account_id(reporter_account_id)
+                reporter_display_name_response = self.find_user_display_name_by_account_id(reporter_account_id)
+                if reporter_display_name_response["output"]["status"] == "ko":
+                    return reporter_display_name_response
+                reporter_display_name = reporter_display_name_response["output"]["display_name"]
                 formatted_issues.append({
                     "issue_key": issue["key"],
                     "summary": issue["fields"]["summary"],
