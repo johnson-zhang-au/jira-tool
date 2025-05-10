@@ -234,7 +234,7 @@ class JiraTool(BaseAgentTool):
         # Find the accountId of the reporter using their email
         reporter_email = args["reporter"]
         response = self.find_user_account_id(reporter_email)
-        if response.get("ouput",{}).get("status","ok"):
+        if response.get("ouput",{}).get("status","ko") == "ok":
             reporter_account_id = response["output"]["account_id"]
         else:
             return {
