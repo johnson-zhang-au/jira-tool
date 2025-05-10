@@ -110,7 +110,12 @@ class JiraTool(BaseAgentTool):
         masked_config = self.config.copy()
         if "jira_api_connection" in masked_config:
             masked_config["jira_api_connection"] = masked_config["jira_api_connection"].copy()
-            masked_config["jira_api_connection"]["jira_api_token"] = "********"
+            token = masked_config["jira_api_connection"]["jira_api_token"]
+            if token and len(token) > 8:
+                masked_token = f"{token[:4]}...{token[-4:]}"
+            else:
+                masked_token = "********"
+            masked_config["jira_api_connection"]["jira_api_token"] = masked_token
         trace.attributes["config"] = masked_config
 
         if action == "create_issue":
