@@ -52,8 +52,8 @@ class JiraTool(BaseAgentTool):
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["create_issue", "get_issue_by_key", "close_issue", "update_issue_priority", "get_issues_by_reporter", "find_user_account_id", "find_user_display_name_by_account_id"],
-                        "description": "The action to perform (create_issue, get_issue_by_key, close_issue, update_issue_priority, get_issues_by_reporter, find_user_account_id, or find_user_display_name_by_account_id)"
+                        "enum": ["create_issue", "get_issue_by_key", "close_issue", "update_issue_priority", "get_issues_by_reporter", "find_user_account_id", "find_user_display_name_by_account_id", "find_user_display_name_by_email"],
+                        "description": "The action to perform (create_issue, get_issue_by_key, close_issue, update_issue_priority, get_issues_by_reporter, find_user_account_id, find_user_display_name_by_account_id, or find_user_display_name_by_email)"
                     },
                     "issue_key": {
                         "type": "string",
@@ -84,7 +84,7 @@ class JiraTool(BaseAgentTool):
                     },
                     "email": {
                         "type": "string",
-                        "description": "Email address of the user (required for find_user_account_id action)"
+                        "description": "Email address of the user (required for find_user_account_id or find_user_display_name_by_email action)"
                     },
                     "account_id": {
                         "type": "string",
@@ -168,6 +168,20 @@ class JiraTool(BaseAgentTool):
                     }
                 }
             result = self.find_user_display_name_by_account_id(args["account_id"])
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
+        elif action == "find_user_display_name_by_email":
+            if "email" not in args:
+                message = "Missing required field: email"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
+            result = self.find_user_display_name_by_email(args["email"])
             # Log outputs to trace
             trace.outputs["output"] = result["output"]
             return result
@@ -273,6 +287,38 @@ class JiraTool(BaseAgentTool):
                     "message": message
                 }
             }
+
+    def find_user_display_name_by_email(self, email):
+        """
+        Finds the display name of a user based on their email address.
+        :param email: The email address of the user.
+        :return: The display name of the user.
+        """
+        logger.debug(f"Searching for user display name with email: {email}")
+        
+        # First find the account ID
+        account_id_response = self.find_user_account_id(email)
+        if account_id_response["output"]["status"] == "ko":
+            return account_id_response
+        
+        account_id = account_id_response["output"]["account_id"]
+        
+        # Then find the display name
+        display_name_response = self.find_user_display_name_by_account_id(account_id)
+        if display_name_response["output"]["status"] == "ko":
+            return display_name_response
+            
+        display_name = display_name_response["output"]["display_name"]
+        
+        return {
+            "output": {
+                "status": "ok",
+                "message": f"Found display name for email {email}: {display_name}",
+                "email": email,
+                "account_id": account_id,
+                "display_name": display_name
+            }
+        }
 
     def create_issue(self, args):
         logger.debug("Starting 'create_issue' action.")
