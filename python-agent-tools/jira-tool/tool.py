@@ -106,7 +106,12 @@ class JiraTool(BaseAgentTool):
         trace.span["name"] = "JIRA_TOOL_CALL"
         for key, value in args.items():
             trace.inputs[key] = value
-        trace.attributes["config"] = self.config
+        # Mask sensitive information in config
+        masked_config = self.config.copy()
+        if "jira_api_connection" in masked_config:
+            masked_config["jira_api_connection"] = masked_config["jira_api_connection"].copy()
+            masked_config["jira_api_connection"]["jira_api_token"] = "********"
+        trace.attributes["config"] = masked_config
 
         if action == "create_issue":
             result = self.create_issue(args)
