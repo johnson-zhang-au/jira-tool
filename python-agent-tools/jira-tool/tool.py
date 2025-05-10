@@ -52,8 +52,8 @@ class JiraTool(BaseAgentTool):
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["create_issue", "get_issue_by_key", "close_issue", "update_issue_priority", "get_issues_by_reporter"],
-                        "description": "The action to perform (create_issue, get_issue_by_key, close_issue, update_issue_priority, or get_issues_by_reporter)"
+                        "enum": ["create_issue", "get_issue_by_key", "close_issue", "update_issue_priority", "get_issues_by_reporter", "find_user_account_id", "find_user_display_name_by_account_id"],
+                        "description": "The action to perform (create_issue, get_issue_by_key, close_issue, update_issue_priority, get_issues_by_reporter, find_user_account_id, or find_user_display_name_by_account_id)"
                     },
                     "issue_key": {
                         "type": "string",
@@ -81,6 +81,14 @@ class JiraTool(BaseAgentTool):
                         "type": "string",
                         "enum": self.issue_types,
                         "description": f"Issue type (must be one of: {', '.join(self.issue_types)}) (required for create_issue action)"
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Email address of the user (required for find_user_account_id action)"
+                    },
+                    "account_id": {
+                        "type": "string",
+                        "description": "Account ID of the user (required for find_user_display_name_by_account_id action)"
                     }
                 },
                 "required": ["action"]
@@ -110,7 +118,7 @@ class JiraTool(BaseAgentTool):
             # Log outputs to trace
             trace.outputs["output"] = result["output"]
             return result
-        elif action == "close_issue":  # Updated from "close_issue"
+        elif action == "close_issue":
             result = self.close_issue(args)
             # Log outputs to trace
             trace.outputs["output"] = result["output"]
@@ -125,9 +133,43 @@ class JiraTool(BaseAgentTool):
             # Log outputs to trace
             trace.outputs["output"] = result["output"]
             return result
+        elif action == "find_user_account_id":
+            if "email" not in args:
+                message = "Missing required field: email"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
+            result = self.find_user_account_id(args["email"])
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
+        elif action == "find_user_display_name_by_account_id":
+            if "account_id" not in args:
+                message = "Missing required field: account_id"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
+            result = self.find_user_display_name_by_account_id(args["account_id"])
+            # Log outputs to trace
+            trace.outputs["output"] = result["output"]
+            return result
         else:
-            logger.error(f"Invalid action: {action}")
-            raise ValueError(f"Invalid action: {action}")
+            message = f"Invalid action: {action}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
     def find_user_account_id(self, email):
         """
@@ -154,6 +196,7 @@ class JiraTool(BaseAgentTool):
             
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Found accountId for user with email {email}: {account_id}",
                     "account_id": account_id,
                     "email": email
@@ -176,34 +219,52 @@ class JiraTool(BaseAgentTool):
         Finds the display name of a user based on their accountId.
         :param account_id: The accountId of the user.
         :return: The display name of the user.
-        :raises ValueError: If no user is found or an error occurs.
         """
         logger.debug(f"Searching for user with accountId: {account_id}")
         try:
             users = self.jira.user_find_by_user_string(account_id=account_id)
             if not users:
-                logger.error(f"No user found with accountId: {account_id}")
-                raise ValueError(f"No user found with accountId: {account_id}")
+                message = f"No user found with accountId: {account_id}"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
             display_name = users[0]["displayName"]
             logger.debug(f"Found display name for accountId {account_id}: {display_name}")
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Found display name for accountId {account_id}: {display_name}",
                     "account_id": account_id,
                     "display_name": display_name
                 }
             }
         except Exception as e:
-            logger.error(f"Error finding user with accountId {account_id}: {str(e)}")
-            raise ValueError(f"Failed to find user with accountId {account_id}: {str(e)}")
+            message = f"Error finding user with accountId {account_id}: {str(e)}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
     def create_issue(self, args):
         logger.debug("Starting 'create_issue' action.")
         required_fields = ["reporter", "issuetype", "summary", "description"]
         for field in required_fields:
             if field not in args:
-                logger.error(f"Missing required field: {field}")
-                raise ValueError(f"Missing required field: {field}")
+                message = f"Missing required field: {field}"
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
 
         # Validate the  priority value
         valid_priority_priorities = ["Lowest", "Low", "Medium", "High", "Highest"]
@@ -212,11 +273,11 @@ class JiraTool(BaseAgentTool):
             message = f"Invalid priority value: {priority}. Must be one of {valid_priority_priorities}"
             logger.error(message)
             return {
-                    "output": {
-                        "status": "ko",
-                        "message": message
-                    }
+                "output": {
+                    "status": "ko",
+                    "message": message
                 }
+            }
         
         # Validate the  priority value
         valid_issuetype_priorities = self.issue_types
@@ -264,6 +325,7 @@ class JiraTool(BaseAgentTool):
             logger.info(f"Issue created successfully: {issue['key']}")
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Issue created successfully",
                     "issue_key": issue["key"],
                     "url": f"{self.jira_instance_url}/browse/{issue['key']}"
@@ -282,8 +344,14 @@ class JiraTool(BaseAgentTool):
     def get_issue_by_key(self, args):
         logger.debug("Starting 'get_issue_by_key' action.")
         if "issue_key" not in args or "reporter" not in args:
-            logger.error("Missing required fields: issue_key or reporter")
-            raise ValueError("Missing required fields: issue_key or reporter")
+            message = "Missing required fields: issue_key or reporter"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
         try:
             logger.debug(f"Fetching issue with key: {args['issue_key']}")
@@ -304,11 +372,18 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if reporter_account_id != provided_reporter_account_id:
-                logger.error("Provided reporter does not match the reporter in the issue.")
-                raise ValueError("Provided reporter does not match the reporter in the issue.")
+                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
 
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Issue retrieved successfully",
                     "issue_key": issue["key"],
                     "url": f"{self.jira_instance_url}/browse/{issue['key']}",
@@ -320,14 +395,26 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            logger.error(f"Error retrieving issue: {str(e)}")
-            raise
+            message = f"Error retrieving issue by key {args["issue_key"]}: {str(e)}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
     def close_issue(self, args):
         logger.debug("Starting 'close_issue' action.")
         if "issue_key" not in args or "reporter" not in args:
-            logger.error("Missing required fields: issue_key or reporter")
-            raise ValueError("Missing required fields: issue_key or reporter")
+            message = "Missing required fields: issue_key or reporter"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
         try:
             # Fetch the issue details
@@ -342,8 +429,14 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if issue_reporter_account_id != provided_reporter_account_id:
-                logger.error("Provided reporter does not match the reporter in the issue.")
-                raise ValueError("Provided reporter does not match the reporter in the issue.")
+                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
 
             # Close the issue
             logger.debug(f"Closing issue with key: {args['issue_key']}")
@@ -358,6 +451,7 @@ class JiraTool(BaseAgentTool):
 
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Issue closed successfully",
                     "issue_key": issue_key,
                     "url": f"{self.jira_instance_url}/browse/{issue_key}",
@@ -365,21 +459,39 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            logger.error(f"Error closing issue: {str(e)}")
-            raise
+            message = f"Error closing issue {args["issue_key"]}: {str(e)}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
     def update_issue_priority(self, args):
         logger.debug("Starting 'update_issue_priority' action.")
         if "issue_key" not in args or "priority" not in args or "reporter" not in args:
-            logger.error("Missing required fields: issue_key, priority, or reporter")
-            raise ValueError("Missing required fields: issue_key, priority, or reporter")
+            message = "Missing required fields: issue_key, priority, or reporter"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
         # Validate the new priority value
         valid_priorities = ["Lowest", "Low", "Medium", "High", "Highest"]
         new_priority = args["priority"]
         if new_priority not in valid_priorities:
-            logger.error(f"Invalid priority value: {new_priority}. Must be one of {valid_priorities}")
-            raise ValueError(f"Invalid priority value: {new_priority}. Must be one of {valid_priorities}")
+            message = f"Invalid priority value: {new_priority}. Must be one of {valid_priorities}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
         try:
             # Fetch the issue details
@@ -394,8 +506,14 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if issue_reporter_account_id != provided_reporter_account_id:
-                logger.error("Provided reporter does not match the reporter in the issue.")
-                raise ValueError("Provided reporter does not match the reporter in the issue.")
+                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                logger.error(message)
+                return {
+                    "output": {
+                        "status": "ko",
+                        "message": message
+                    }
+                }
 
             # Check the current priority
             current_priority = issue["fields"]["priority"]["name"]
@@ -405,6 +523,7 @@ class JiraTool(BaseAgentTool):
                 logger.info(f"Priority for issue {args['issue_key']} is already set to {new_priority}. No update needed.")
                 return {
                     "output": {
+                        "status": "ok",
                         "message": f"Priority for issue {args['issue_key']} is already set to {new_priority}. No update needed."
                     }
                 }
@@ -423,6 +542,7 @@ class JiraTool(BaseAgentTool):
 
             return {
                 "output": {
+                    "status": "ok",
                     "message": "Issue priority updated successfully",
                     "issue_key": issue_key,
                     "url": f"{self.jira_instance_url}/browse/{issue_key}",
@@ -431,14 +551,26 @@ class JiraTool(BaseAgentTool):
                 }
             }
         except Exception as e:
-            logger.error(f"Error updating issue priority: {str(e)}")
-            raise
+            message = f"Error updating issue {args["issue_key"]} priority: {str(e)}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
     def get_issues_by_reporter(self, args):
         logger.debug("Starting 'get_issues_by_reporter' action.")
         if "reporter" not in args:
-            logger.error("Missing required field: reporter")
-            raise ValueError("Missing required field: reporter")
+            message = "Missing required field: reporter"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
         try:
             # Find the accountId of the provided reporter email
@@ -468,11 +600,18 @@ class JiraTool(BaseAgentTool):
 
             return {
                 "output": {
+                    "status": "ok",
                     "message": f"Found {len(formatted_issues)} issues reported by {reporter_email}",
                     "issues": formatted_issues
                 }
             }
         except Exception as e:
-            logger.error(f"Error retrieving issues for reporter {reporter_email}: {str(e)}")
-            raise
+            message = f"Error retrieving issues for reporter {reporter_email}: {str(e)}"
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
 
