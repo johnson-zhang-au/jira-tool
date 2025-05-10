@@ -231,6 +231,18 @@ class JiraTool(BaseAgentTool):
         :return: The display name of the user.
         """
         logger.debug(f"Searching for user with accountId: {account_id}")
+        
+        # Check if the provided account_id looks like an email
+        if '@' in account_id:
+            message = f"The provided value '{account_id}' appears to be an email address. Please use the find_user_account_id action first to get the account ID."
+            logger.error(message)
+            return {
+                "output": {
+                    "status": "ko",
+                    "message": message
+                }
+            }
+
         try:
             users = self.jira.user_find_by_user_string(account_id=account_id)
             if not users:
@@ -382,7 +394,7 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if reporter_account_id != provided_reporter_account_id:
-                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                message = f"Forbidden!!! Provided reporter {reporter_email} does not match the reporter in the issue. Only the original reporter can access this issue."
                 logger.error(message)
                 return {
                     "output": {
@@ -442,7 +454,7 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if issue_reporter_account_id != provided_reporter_account_id:
-                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                message = f"Forbidden!!! Provided reporter {reporter_email} does not match the reporter in the issue. Only the original reporter can close this issue."
                 logger.error(message)
                 return {
                     "output": {
@@ -522,7 +534,7 @@ class JiraTool(BaseAgentTool):
 
             # Verify the reporter
             if issue_reporter_account_id != provided_reporter_account_id:
-                message = f"Provided reporter {reporter_email} does not match the reporter in the issue."
+                message = f"Forbidden!!! Provided reporter {reporter_email} does not match the reporter in the issue. Only the original reporter can update this issue's priority."
                 logger.error(message)
                 return {
                     "output": {
