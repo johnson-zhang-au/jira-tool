@@ -10,6 +10,7 @@ This plugin provides integration with Jira as an agent tool, using the Jira Pyth
 - Update issue priorities
 - Get issues by reporter
 - Fetch issues with comments and detailed information
+- User lookup by email or account ID
 - Support for both Jira Cloud and Jira Server instances
 
 ## Installation
@@ -56,7 +57,8 @@ The tool requires the following configuration parameters:
 
 ### Creating an Issue
 
-```python
+Request:
+```json
 {
     "action": "create_issue",
     "reporter": "user@example.com",
@@ -67,9 +69,32 @@ The tool requires the following configuration parameters:
 }
 ```
 
+Success Response:
+```json
+{
+    "status": "ok",
+    "message": "Issue created successfully",
+    "output": {
+        "issue_key": "PROJECT-123",
+        "issue_url": "https://your-instance.atlassian.net/browse/PROJECT-123"
+    }
+}
+```
+
+Error Response:
+```json
+{
+    "status": "ko",
+    "message": "Failed to create issue",
+    "error": "Invalid issue type",
+    "missing_fields": ["issuetype"]
+}
+```
+
 ### Getting an Issue
 
-```python
+Request:
+```json
 {
     "action": "get_issue_by_key",
     "issue_key": "PROJECT-123",
@@ -77,35 +102,97 @@ The tool requires the following configuration parameters:
 }
 ```
 
-### Closing an Issue
-
-```python
+Success Response:
+```json
 {
-    "action": "close_issue",
-    "issue_key": "PROJECT-123",
-    "reporter": "user@example.com"
+    "status": "ok",
+    "message": "Issue retrieved successfully",
+    "output": {
+        "issue_key": "PROJECT-123",
+        "summary": "Issue summary",
+        "description": "Detailed description",
+        "status": "Open",
+        "priority": "Medium",
+        "reporter": "user@example.com"
+    }
 }
 ```
 
-### Updating Issue Priority
+### User Lookup Operations
 
-```python
+#### Find User Account ID
+Request:
+```json
 {
-    "action": "update_issue_priority",
-    "issue_key": "PROJECT-123",
-    "priority": "High",
-    "reporter": "user@example.com"
+    "action": "find_user_account_id",
+    "email": "user@example.com"
 }
 ```
 
-### Getting Issues by Reporter
-
-```python
+Success Response:
+```json
 {
-    "action": "get_issues_by_reporter",
-    "reporter": "user@example.com"
+    "status": "ok",
+    "message": "Found accountId for user",
+    "output": {
+        "account_id": "123456:7890abcd-efgh-ijkl-mnop-qrstuvwxyz",
+        "email": "user@example.com"
+    }
 }
 ```
+
+#### Find User Display Name
+Request:
+```json
+{
+    "action": "find_user_display_name_by_email",
+    "email": "user@example.com"
+}
+```
+
+Success Response:
+```json
+{
+    "status": "ok",
+    "message": "Found display name for user",
+    "output": {
+        "display_name": "John Doe",
+        "email": "user@example.com"
+    }
+}
+```
+
+## Error Handling
+
+The tool includes comprehensive error handling and logging:
+
+### Standardized Response Format
+All responses follow a consistent format:
+```json
+{
+    "status": "ok" | "ko",
+    "message": "Human readable message",
+    "output": {
+        // Operation-specific data
+    },
+    "error": "Error message (if status is ko)",
+    "missing_fields": ["field1", "field2"] // Optional: List of missing required fields
+}
+```
+
+### Common Error Scenarios
+- Invalid configuration
+- Missing required fields
+- Invalid issue type or priority
+- Reporter verification failure
+- API authentication errors
+- Network connectivity issues
+
+### Logging
+- DEBUG: Detailed operation information
+- INFO: Operation results and important events
+- WARNING: Non-critical issues
+- ERROR: Critical failures and exceptions
 
 ## Custom Recipe: Jira Issues Fetcher
 
@@ -128,14 +215,6 @@ The plugin includes a custom recipe that allows you to fetch issues from Jira an
     "issue_statuses": ["Open", "In Progress", "Done"]
 }
 ```
-
-## Error Handling
-
-The tool includes comprehensive error handling and logging:
-- Input validation for all operations
-- Reporter verification for sensitive operations
-- Detailed error messages and logging
-- Support for different logging levels
 
 ## Disclaimer
 

@@ -232,60 +232,29 @@ class JiraTool(BaseAgentTool):
             masked_config["jira_api_connection"]["jira_api_token"] = masked_token
         trace.attributes["config"] = masked_config
 
+        result = None
         if action == "create_issue":
             result = self.create_issue(args)
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
         elif action == "get_issue_by_key":
             result = self.get_issue_by_key(args)
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
         elif action == "close_issue":
             result = self.close_issue(args)
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
         elif action == "update_issue_priority":
             result = self.update_issue_priority(args)
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
         elif action == "get_issues_by_reporter":
             result = self.get_issues_by_reporter(args)
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
         elif action == "find_user_account_id":
-            required_fields = ["email"]
-            error_response = self.check_required_fields(args, required_fields)
-            if error_response:
-                return error_response
-            result = self.find_user_account_id(args["email"])
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
+            result = self.find_user_account_id(args.get("email"))
         elif action == "find_user_display_name_by_account_id":
-            required_fields = ["account_id"]
-            error_response = self.check_required_fields(args, required_fields)
-            if error_response:
-                return error_response
-            result = self.find_user_display_name_by_account_id(args["account_id"])
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
+            result = self.find_user_display_name_by_account_id(args.get("account_id"))
         elif action == "find_user_display_name_by_email":
-            required_fields = ["email"]
-            error_response = self.check_required_fields(args, required_fields)
-            if error_response:
-                return error_response
-            result = self.find_user_display_name_by_email(args["email"])
-            # Log outputs to trace
-            trace.outputs["output"] = result["output"]
-            return result
+            result = self.find_user_display_name_by_email(args.get("email"))
         else:
-            return self._create_error_response(f"Invalid action: {action}")
+            result = self._create_error_response(f"Invalid action: {action}")
+
+        # Log outputs to trace
+        trace.outputs["output"] = result["output"]
+        return result
 
     def find_user_account_id(self, email):
         """
@@ -294,6 +263,11 @@ class JiraTool(BaseAgentTool):
         :return: The accountId of the user.
         :raises ValueError: If no user is found or an error occurs.
         """
+        required_fields = ["email"]
+        error_response = self.check_required_fields({"email": email}, required_fields)
+        if error_response:
+            return error_response
+
         logger.debug(f"Searching for user with email: {email}")
         try:
             users = self.jira.user_find_by_user_string(query=email, start=0, limit=1, include_inactive_users=False)
@@ -322,6 +296,11 @@ class JiraTool(BaseAgentTool):
         :param account_id: The accountId of the user.
         :return: The display name of the user.
         """
+        required_fields = ["account_id"]
+        error_response = self.check_required_fields({"account_id": account_id}, required_fields)
+        if error_response:
+            return error_response
+
         logger.debug(f"Searching for user with accountId: {account_id}")
         
         # Check if the provided account_id looks like an email
@@ -350,6 +329,11 @@ class JiraTool(BaseAgentTool):
         :param email: The email address of the user.
         :return: The display name of the user.
         """
+        required_fields = ["email"]
+        error_response = self.check_required_fields({"email": email}, required_fields)
+        if error_response:
+            return error_response
+
         logger.debug(f"Searching for user display name with email: {email}")
         
         # First find the account ID
@@ -374,7 +358,11 @@ class JiraTool(BaseAgentTool):
         )
 
     def create_issue(self, args):
-        logger.debug("Starting 'create_issue' action.")
+        """
+        Creates a new Jira issue.
+        :param args: Dictionary containing issue details
+        :return: Response with created issue details
+        """
         required_fields = ["reporter", "issuetype", "summary", "description"]
         error_response = self.check_required_fields(args, required_fields)
         if error_response:
@@ -434,7 +422,11 @@ class JiraTool(BaseAgentTool):
             return self._create_error_response(f"Error creating issue: {str(e)}")
 
     def get_issue_by_key(self, args):
-        logger.debug("Starting 'get_issue_by_key' action.")
+        """
+        Retrieves a Jira issue by its key.
+        :param args: Dictionary containing issue key and reporter
+        :return: Response with issue details
+        """
         required_fields = ["issue_key", "reporter"]
         error_response = self.check_required_fields(args, required_fields)
         if error_response:
@@ -483,7 +475,11 @@ class JiraTool(BaseAgentTool):
             return self._create_error_response(f"Error retrieving issue by key {args['issue_key']}: {str(e)}")
 
     def close_issue(self, args):
-        logger.debug("Starting 'close_issue' action.")
+        """
+        Closes a Jira issue.
+        :param args: Dictionary containing issue key and reporter
+        :return: Response with closed issue details
+        """
         required_fields = ["issue_key", "reporter"]
         error_response = self.check_required_fields(args, required_fields)
         if error_response:
@@ -530,7 +526,11 @@ class JiraTool(BaseAgentTool):
             return self._create_error_response(f"Error closing issue {args['issue_key']}: {str(e)}")
 
     def update_issue_priority(self, args):
-        logger.debug("Starting 'update_issue_priority' action.")
+        """
+        Updates the priority of a Jira issue.
+        :param args: Dictionary containing issue key, priority, and reporter
+        :return: Response with updated issue details
+        """
         required_fields = ["issue_key", "priority", "reporter"]
         error_response = self.check_required_fields(args, required_fields)
         if error_response:
@@ -596,7 +596,11 @@ class JiraTool(BaseAgentTool):
             return self._create_error_response(f"Error updating issue {args['issue_key']} priority: {str(e)}")
 
     def get_issues_by_reporter(self, args):
-        logger.debug("Starting 'get_issues_by_reporter' action.")
+        """
+        Retrieves all issues reported by a specific user.
+        :param args: Dictionary containing reporter email
+        :return: Response with list of issues
+        """
         required_fields = ["reporter"]
         error_response = self.check_required_fields(args, required_fields)
         if error_response:
