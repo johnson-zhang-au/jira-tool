@@ -613,6 +613,8 @@ class JiraTool(BaseAgentTool):
             if reporter_display_name_response["output"]["action_status"] == "ko":
                 return reporter_display_name_response
             reporter_display_name = reporter_display_name_response["output"]["display_name"]
+            
+            issue = self.jira.issue(args["issue_key"])
 
             return self._create_success_response(
                 "Issue closed successfully",
