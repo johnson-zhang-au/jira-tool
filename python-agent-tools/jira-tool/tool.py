@@ -113,7 +113,7 @@ class JiraTool(BaseAgentTool):
         :param provided_reporter_email: The email of the provided reporter
         :return: None if verified, error response if not verified
         """
-        provided_reporter_response = self.find_user_account_id(provided_reporter_email)
+        provided_reporter_response = self.find_user_account_id({"email": provided_reporter_email})
         if provided_reporter_response["output"]["status"] == "ko":
             return provided_reporter_response
         provided_reporter_id = provided_reporter_response["output"]["account_id"]
@@ -264,11 +264,11 @@ class JiraTool(BaseAgentTool):
         elif action == "get_issues_by_reporter":
             result = self.get_issues_by_reporter(args)
         elif action == "find_user_account_id":
-            result = self.find_user_account_id(args.get("email"))
+            result = self.find_user_account_id(args)
         elif action == "find_user_display_name_by_account_id":
-            result = self.find_user_display_name_by_account_id(args.get("account_id"))
+            result = self.find_user_display_name_by_account_id(args)
         elif action == "find_user_display_name_by_email":
-            result = self.find_user_display_name_by_email(args.get("email"))
+            result = self.find_user_display_name_by_email(args)
         else:
             result = self._create_error_response(f"Invalid action: {action}")
 
@@ -276,18 +276,19 @@ class JiraTool(BaseAgentTool):
         trace.outputs["output"] = result["output"]
         return result
 
-    def find_user_account_id(self, email):
+    def find_user_account_id(self, args):
         """
         Finds the accountId of a user based on their email address.
-        :param email: The email address of the user.
+        :param args: Dictionary containing email
         :return: The accountId of the user.
         :raises ValueError: If no user is found or an error occurs.
         """
         required_fields = ["email"]
-        error_response = self.check_required_fields({"email": email}, required_fields)
+        error_response = self.check_required_fields(args, required_fields)
         if error_response:
             return error_response
 
+        email = args["email"]
         logger.debug(f"Searching for user with email: {email}")
         try:
             users = self.jira.user_find_by_user_string(query=email, start=0, limit=1, include_inactive_users=False)
@@ -310,17 +311,18 @@ class JiraTool(BaseAgentTool):
                 email=email
             )
 
-    def find_user_display_name_by_account_id(self, account_id):
+    def find_user_display_name_by_account_id(self, args):
         """
         Finds the display name of a user based on their accountId.
-        :param account_id: The accountId of the user.
+        :param args: Dictionary containing account_id
         :return: The display name of the user.
         """
         required_fields = ["account_id"]
-        error_response = self.check_required_fields({"account_id": account_id}, required_fields)
+        error_response = self.check_required_fields(args, required_fields)
         if error_response:
             return error_response
 
+        account_id = args["account_id"]
         logger.debug(f"Searching for user with accountId: {account_id}")
         
         # Check if the provided account_id looks like an email
@@ -343,28 +345,29 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response(f"Error finding user with accountId {account_id}: {str(e)}")
 
-    def find_user_display_name_by_email(self, email):
+    def find_user_display_name_by_email(self, args):
         """
         Finds the display name of a user based on their email address.
-        :param email: The email address of the user.
+        :param args: Dictionary containing email
         :return: The display name of the user.
         """
         required_fields = ["email"]
-        error_response = self.check_required_fields({"email": email}, required_fields)
+        error_response = self.check_required_fields(args, required_fields)
         if error_response:
             return error_response
 
+        email = args["email"]
         logger.debug(f"Searching for user display name with email: {email}")
         
         # First find the account ID
-        account_id_response = self.find_user_account_id(email)
+        account_id_response = self.find_user_account_id({"email": email})
         if account_id_response["output"]["status"] == "ko":
             return account_id_response
         
         account_id = account_id_response["output"]["account_id"]
         
         # Then find the display name
-        display_name_response = self.find_user_display_name_by_account_id(account_id)
+        display_name_response = self.find_user_display_name_by_account_id({"account_id": account_id})
         if display_name_response["output"]["status"] == "ko":
             return display_name_response
             
@@ -402,14 +405,14 @@ class JiraTool(BaseAgentTool):
         try:
             # Find the accountId of the reporter using their email
             reporter_email = args["reporter"]
-            reporter_response = self.find_user_account_id(reporter_email)
+            reporter_response = self.find_user_account_id({"email": reporter_email})
             if reporter_response["output"]["status"] == "ko":
                 return reporter_response
             reporter_account_id = reporter_response["output"]["account_id"]
             logger.debug(f"Reporter accountId: {reporter_account_id}")
 
             # Get the display name of the reporter
-            display_name_response = self.find_user_display_name_by_account_id(reporter_account_id)
+            display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
             if display_name_response["output"]["status"] == "ko":
                 return display_name_response
             reporter_display_name = display_name_response["output"]["display_name"]
@@ -470,7 +473,7 @@ class JiraTool(BaseAgentTool):
 
             # Extract additional details
             reporter_account_id = issue["fields"]["reporter"]["accountId"]
-            reporter_display_name_response = self.find_user_display_name_by_account_id(reporter_account_id)
+            reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
             if reporter_display_name_response["output"]["status"] == "ko":
                 return reporter_display_name_response
             reporter_display_name = reporter_display_name_response["output"]["display_name"]
@@ -482,7 +485,7 @@ class JiraTool(BaseAgentTool):
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_response = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id({"email": reporter_email})
             if provided_reporter_response["output"]["status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
@@ -527,7 +530,7 @@ class JiraTool(BaseAgentTool):
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_response = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id({"email": reporter_email})
             if provided_reporter_response["output"]["status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
@@ -586,7 +589,7 @@ class JiraTool(BaseAgentTool):
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            provided_reporter_response = self.find_user_account_id(reporter_email)
+            provided_reporter_response = self.find_user_account_id({"email": reporter_email})
             if provided_reporter_response["output"]["status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
@@ -643,14 +646,14 @@ class JiraTool(BaseAgentTool):
         try:
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
-            reporter_response = self.find_user_account_id(reporter_email)
+            reporter_response = self.find_user_account_id({"email": reporter_email})
             if reporter_response["output"]["status"] == "ko":
                 return reporter_response
             reporter_account_id = reporter_response["output"]["account_id"]
             logger.debug(f"Reporter accountId: {reporter_account_id}")
 
             # Get the display name of the reporter
-            display_name_response = self.find_user_display_name_by_account_id(reporter_account_id)
+            display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
             if display_name_response["output"]["status"] == "ko":
                 return display_name_response
             reporter_display_name = display_name_response["output"]["display_name"]
@@ -661,7 +664,7 @@ class JiraTool(BaseAgentTool):
             logger.debug(f"JQL query: {jql}")
 
             # Search for issues
-            issues = self.jira.jql(jql)
+            issues = self.jira.jql(jql)["issues"]
             logger.info(f"Found {len(issues)} issues for reporter {reporter_email}")
 
             # Format the response with essential details
