@@ -1,6 +1,7 @@
 from dataiku.llm.agent_tools import BaseAgentTool
 from atlassian import Jira
 from utils.logging import logger  # Import the LazyLogger class
+import traceback  # Add traceback module import
 
 class JiraTool(BaseAgentTool):
     def set_config(self, config, plugin_config):
@@ -71,6 +72,46 @@ class JiraTool(BaseAgentTool):
             "output": {
                 "action_status": "ko",
                 "message": message
+            }
+        }
+        response["output"].update(kwargs)
+        return response
+
+    def _create_error_response_with_traceback(self, message, error, **kwargs):
+        """
+        Creates a standardized error response with traceback information.
+        :param message: The error message
+        :param error: The exception object
+        :param kwargs: Additional fields to include in the response
+        :return: Standardized error response dictionary
+        """
+        # Get the traceback information
+        tb = traceback.extract_tb(error.__traceback__)
+        if tb:
+            # Get the last frame (where the error occurred)
+            last_frame = tb[-1]
+            error_location = f"{last_frame.filename}:{last_frame.lineno}"
+            error_context = f"in {last_frame.name}"
+            error_line = last_frame.line
+        else:
+            error_location = "unknown"
+            error_context = "unknown"
+            error_line = "unknown"
+
+        # Create the detailed error message
+        detailed_message = f"{message}\nError occurred at {error_location} {error_context}\nLine: {error_line}\nError: {str(error)}"
+        logger.error(detailed_message)
+
+        response = {
+            "output": {
+                "action_status": "ko",
+                "message": message,
+                "error_details": {
+                    "location": error_location,
+                    "context": error_context,
+                    "line": error_line,
+                    "error": str(error)
+                }
             }
         }
         response["output"].update(kwargs)
@@ -306,8 +347,9 @@ class JiraTool(BaseAgentTool):
                 email=email
             )
         except Exception as e:
-            return self._create_error_response(
-                f"Failed to find user with email {email} - error message: {str(e)}",
+            return self._create_error_response_with_traceback(
+                f"Failed to find user with email {email}",
+                e,
                 email=email
             )
 
@@ -343,7 +385,10 @@ class JiraTool(BaseAgentTool):
                 display_name=display_name
             )
         except Exception as e:
-            return self._create_error_response(f"Error finding user with accountId {account_id}: {str(e)}")
+            return self._create_error_response_with_traceback(
+                f"Error finding user with accountId {account_id}",
+                e
+            )
 
     def find_user_display_name_by_email(self, args):
         """
@@ -359,26 +404,33 @@ class JiraTool(BaseAgentTool):
         email = args["email"]
         logger.debug(f"Searching for user display name with email: {email}")
         
-        # First find the account ID
-        account_id_response = self.find_user_account_id({"email": email})
-        if account_id_response["output"]["action_status"] == "ko":
-            return account_id_response
-        
-        account_id = account_id_response["output"]["account_id"]
-        
-        # Then find the display name
-        display_name_response = self.find_user_display_name_by_account_id({"account_id": account_id})
-        if display_name_response["output"]["action_status"] == "ko":
-            return display_name_response
+        try:
+            # First find the account ID
+            account_id_response = self.find_user_account_id({"email": email})
+            if account_id_response["output"]["action_status"] == "ko":
+                return account_id_response
             
-        display_name = display_name_response["output"]["display_name"]
-        
-        return self._create_success_response(
-            f"Found display name for email {email}: {display_name}",
-            email=email,
-            account_id=account_id,
-            display_name=display_name
-        )
+            account_id = account_id_response["output"]["account_id"]
+            
+            # Then find the display name
+            display_name_response = self.find_user_display_name_by_account_id({"account_id": account_id})
+            if display_name_response["output"]["action_status"] == "ko":
+                return display_name_response
+                
+            display_name = display_name_response["output"]["display_name"]
+            
+            return self._create_success_response(
+                f"Found display name for email {email}: {display_name}",
+                email=email,
+                account_id=account_id,
+                display_name=display_name
+            )
+        except Exception as e:
+            return self._create_error_response_with_traceback(
+                f"Error finding display name for email {email}",
+                e,
+                email=email
+            )
 
     def create_issue(self, args):
         """
@@ -453,7 +505,12 @@ class JiraTool(BaseAgentTool):
                 created=created
             )
         except Exception as e:
-            return self._create_error_response(f"Error creating issue: {str(e)}")
+            return self._create_error_response_with_traceback(
+                f"Error creating issue",
+                e,
+                reporter=args["reporter"],
+                summary=args["summary"]
+            )
 
     def get_issue_by_key(self, args):
         """
@@ -509,7 +566,12 @@ class JiraTool(BaseAgentTool):
                 created=created
             )
         except Exception as e:
-            return self._create_error_response(f"Error retrieving issue by key {args['issue_key']}: {str(e)}")
+            return self._create_error_response_with_traceback(
+                f"Error retrieving issue by key {args['issue_key']}",
+                e,
+                issue_key=args["issue_key"],
+                reporter=args["reporter"]
+            )
 
     def close_issue(self, args):
         """
@@ -570,7 +632,12 @@ class JiraTool(BaseAgentTool):
                 created=issue["fields"]["created"]
             )
         except Exception as e:
-            return self._create_error_response(f"Error closing issue {args['issue_key']}: {str(e)}")
+            return self._create_error_response_with_traceback(
+                f"Error closing issue {args['issue_key']}",
+                e,
+                issue_key=args["issue_key"],
+                reporter=args["reporter"]
+            )
 
     def update_issue_priority(self, args):
         """
@@ -611,17 +678,17 @@ class JiraTool(BaseAgentTool):
                     f"Forbidden!!! Provided reporter {reporter_email} does not match the reporter in the issue. Only the original reporter can update this issue's priority."
                 )
 
+            # Get reporter display name for the response
+            reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
+            if reporter_display_name_response["output"]["action_status"] == "ko":
+                return reporter_display_name_response
+            reporter_display_name = reporter_display_name_response["output"]["display_name"]
+
             # Check the current priority
             current_priority = issue["fields"]["priority"]["name"]
             logger.debug(f"Current priority of issue {args['issue_key']}: {current_priority}")
 
             if current_priority == new_priority:
-                # Get reporter display name for the response
-                reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
-                if reporter_display_name_response["output"]["action_status"] == "ko":
-                    return reporter_display_name_response
-                reporter_display_name = reporter_display_name_response["output"]["display_name"]
-
                 return self._create_success_response(
                     f"Priority for issue {args['issue_key']} is already set to {new_priority}. No update needed.",
                     issue_key=args["issue_key"],
@@ -645,12 +712,6 @@ class JiraTool(BaseAgentTool):
             self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
 
-            # Get reporter display name for the response
-            reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
-            if reporter_display_name_response["output"]["action_status"] == "ko":
-                return reporter_display_name_response
-            reporter_display_name = reporter_display_name_response["output"]["display_name"]
-
             return self._create_success_response(
                 "Issue priority updated successfully",
                 issue_key=args["issue_key"],
@@ -663,7 +724,13 @@ class JiraTool(BaseAgentTool):
                 created=issue["fields"]["created"]
             )
         except Exception as e:
-            return self._create_error_response(f"Error updating issue {args['issue_key']} priority: {str(e)}")
+            return self._create_error_response_with_traceback(
+                f"Error updating issue {args['issue_key']} priority",
+                e,
+                issue_key=args["issue_key"],
+                reporter=args["reporter"],
+                priority=new_priority
+            )
 
     def get_issues_by_reporter(self, args):
         """
@@ -719,7 +786,9 @@ class JiraTool(BaseAgentTool):
                 issues=issues_list
             )
         except Exception as e:
-            return self._create_error_response(
-                f"Error getting issues for reporter {args['reporter']}: {str(e)}"
+            return self._create_error_response_with_traceback(
+                f"Error getting issues for reporter {args['reporter']}",
+                e,
+                reporter=args["reporter"]
             )
 
