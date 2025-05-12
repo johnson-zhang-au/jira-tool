@@ -210,8 +210,28 @@ class JiraTool(BaseAgentTool):
         return None
 
     def invoke(self, input, trace):
+        """
+        Invokes the appropriate action based on the input.
+        :param input: Dictionary containing the input parameters
+        :param trace: Trace object for logging
+        :return: Response from the invoked action
+        """
+        if not input or not isinstance(input, dict):
+            return self._create_error_response("Invalid input: input must be a dictionary")
+
+        if "input" not in input:
+            return self._create_error_response("Invalid input: missing 'input' field")
+
         args = input["input"]
+        if not isinstance(args, dict):
+            return self._create_error_response("Invalid input: 'input' field must be a dictionary")
+
+        if "action" not in args:
+            return self._create_error_response("Invalid input: missing 'action' field")
+
         action = args["action"]
+        if not isinstance(action, str):
+            return self._create_error_response("Invalid input: 'action' field must be a string")
 
         logger.info(f"Invoking action: {action}")
         logger.debug(f"Input arguments: {args}")
@@ -406,17 +426,28 @@ class JiraTool(BaseAgentTool):
             }
             logger.debug(f"Creating issue with data: {issue_dict}")
             new_issue = self.jira.create_issue(fields=issue_dict)
-            logger.info(f"Issue created successfully: {new_issue.key}")
+            logger.info(f"Issue created successfully: {new_issue}")
+
+            # Get the full issue details after creation
+            issue_key = new_issue["key"]
+            issue = self.jira.issue(issue_key)
+            
+            # Extract essential issue details
+            status = issue["fields"]["status"]["name"]
+            priority = issue["fields"]["priority"]["name"]
+            issue_type = issue["fields"]["issuetype"]["name"]
+            created = issue["fields"]["created"]
 
             return self._create_success_response(
                 "Issue created successfully",
-                issue_key=new_issue.key,
-                url=f"{self.jira_instance_url}/browse/{new_issue.key}",
+                issue_key=issue_key,
+                url=f"{self.jira_instance_url}/browse/{issue_key}",
                 reporter_display_name=reporter_display_name,
                 summary=args["summary"],
-                status=new_issue.fields.status.name,
-                priority=new_issue.fields.priority.name,
-                issue=new_issue
+                status=status,
+                priority=priority,
+                issue_type=issue_type,
+                created=created
             )
         except Exception as e:
             return self._create_error_response(f"Error creating issue: {str(e)}")
@@ -446,6 +477,8 @@ class JiraTool(BaseAgentTool):
             summary = issue["fields"]["summary"]
             status = issue["fields"]["status"]["name"]
             priority = issue["fields"]["priority"]["name"]
+            issue_type = issue["fields"]["issuetype"]["name"]
+            created = issue["fields"]["created"]
 
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
@@ -469,7 +502,8 @@ class JiraTool(BaseAgentTool):
                 summary=summary,
                 status=status,
                 priority=priority,
-                issue=issue
+                issue_type=issue_type,
+                created=created
             )
         except Exception as e:
             return self._create_error_response(f"Error retrieving issue by key {args['issue_key']}: {str(e)}")
@@ -627,10 +661,10 @@ class JiraTool(BaseAgentTool):
             logger.debug(f"JQL query: {jql}")
 
             # Search for issues
-            issues = self.jira.search_issues(jql)
+            issues = self.jira.jql(jql)
             logger.info(f"Found {len(issues)} issues for reporter {reporter_email}")
 
-            # Format the response
+            # Format the response with essential details
             issues_list = []
             for issue in issues:
                 issues_list.append({
@@ -639,6 +673,7 @@ class JiraTool(BaseAgentTool):
                     "summary": issue["fields"]["summary"],
                     "status": issue["fields"]["status"]["name"],
                     "priority": issue["fields"]["priority"]["name"],
+                    "issue_type": issue["fields"]["issuetype"]["name"],
                     "created": issue["fields"]["created"]
                 })
 
