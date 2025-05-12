@@ -69,7 +69,7 @@ class JiraTool(BaseAgentTool):
         logger.error(message)
         response = {
             "output": {
-                "status": "ko",
+                "action_status": "ko",
                 "message": message
             }
         }
@@ -86,7 +86,7 @@ class JiraTool(BaseAgentTool):
         logger.info(message)
         response = {
             "output": {
-                "status": "ok",
+                "action_status": "ok",
                 "message": message
             }
         }
@@ -114,7 +114,7 @@ class JiraTool(BaseAgentTool):
         :return: None if verified, error response if not verified
         """
         provided_reporter_response = self.find_user_account_id({"email": provided_reporter_email})
-        if provided_reporter_response["output"]["status"] == "ko":
+        if provided_reporter_response["output"]["action_status"] == "ko":
             return provided_reporter_response
         provided_reporter_id = provided_reporter_response["output"]["account_id"]
         
@@ -361,14 +361,14 @@ class JiraTool(BaseAgentTool):
         
         # First find the account ID
         account_id_response = self.find_user_account_id({"email": email})
-        if account_id_response["output"]["status"] == "ko":
+        if account_id_response["output"]["action_status"] == "ko":
             return account_id_response
         
         account_id = account_id_response["output"]["account_id"]
         
         # Then find the display name
         display_name_response = self.find_user_display_name_by_account_id({"account_id": account_id})
-        if display_name_response["output"]["status"] == "ko":
+        if display_name_response["output"]["action_status"] == "ko":
             return display_name_response
             
         display_name = display_name_response["output"]["display_name"]
@@ -406,14 +406,14 @@ class JiraTool(BaseAgentTool):
             # Find the accountId of the reporter using their email
             reporter_email = args["reporter"]
             reporter_response = self.find_user_account_id({"email": reporter_email})
-            if reporter_response["output"]["status"] == "ko":
+            if reporter_response["output"]["action_status"] == "ko":
                 return reporter_response
             reporter_account_id = reporter_response["output"]["account_id"]
             logger.debug(f"Reporter accountId: {reporter_account_id}")
 
             # Get the display name of the reporter
             display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
-            if display_name_response["output"]["status"] == "ko":
+            if display_name_response["output"]["action_status"] == "ko":
                 return display_name_response
             reporter_display_name = display_name_response["output"]["display_name"]
             logger.debug(f"Reporter display name: {reporter_display_name}")
@@ -474,7 +474,7 @@ class JiraTool(BaseAgentTool):
             # Extract additional details
             reporter_account_id = issue["fields"]["reporter"]["accountId"]
             reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
-            if reporter_display_name_response["output"]["status"] == "ko":
+            if reporter_display_name_response["output"]["action_status"] == "ko":
                 return reporter_display_name_response
             reporter_display_name = reporter_display_name_response["output"]["display_name"]
             summary = issue["fields"]["summary"]
@@ -486,7 +486,7 @@ class JiraTool(BaseAgentTool):
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
             provided_reporter_response = self.find_user_account_id({"email": reporter_email})
-            if provided_reporter_response["output"]["status"] == "ko":
+            if provided_reporter_response["output"]["action_status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
@@ -531,7 +531,7 @@ class JiraTool(BaseAgentTool):
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
             provided_reporter_response = self.find_user_account_id({"email": reporter_email})
-            if provided_reporter_response["output"]["status"] == "ko":
+            if provided_reporter_response["output"]["action_status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
@@ -551,13 +551,23 @@ class JiraTool(BaseAgentTool):
             comment = f"Issue closed on behalf of the reporter {reporter_email}."
             self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
-            issue_key = args["issue_key"]
+
+            # Get reporter display name for the response
+            reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
+            if reporter_display_name_response["output"]["action_status"] == "ko":
+                return reporter_display_name_response
+            reporter_display_name = reporter_display_name_response["output"]["display_name"]
 
             return self._create_success_response(
                 "Issue closed successfully",
-                issue_key=issue_key,
-                url=f"{self.jira_instance_url}/browse/{issue_key}",
-                issue=issue
+                issue_key=args["issue_key"],
+                url=f"{self.jira_instance_url}/browse/{args['issue_key']}",
+                reporter_display_name=reporter_display_name,
+                summary=issue["fields"]["summary"],
+                status=issue["fields"]["status"]["name"],
+                priority=issue["fields"]["priority"]["name"],
+                issue_type=issue["fields"]["issuetype"]["name"],
+                created=issue["fields"]["created"]
             )
         except Exception as e:
             return self._create_error_response(f"Error closing issue {args['issue_key']}: {str(e)}")
@@ -590,7 +600,7 @@ class JiraTool(BaseAgentTool):
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
             provided_reporter_response = self.find_user_account_id({"email": reporter_email})
-            if provided_reporter_response["output"]["status"] == "ko":
+            if provided_reporter_response["output"]["action_status"] == "ko":
                 return provided_reporter_response
             provided_reporter_account_id = provided_reporter_response["output"]["account_id"]
             logger.debug(f"Provided reporter accountId: {provided_reporter_account_id}")
@@ -606,8 +616,22 @@ class JiraTool(BaseAgentTool):
             logger.debug(f"Current priority of issue {args['issue_key']}: {current_priority}")
 
             if current_priority == new_priority:
+                # Get reporter display name for the response
+                reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
+                if reporter_display_name_response["output"]["action_status"] == "ko":
+                    return reporter_display_name_response
+                reporter_display_name = reporter_display_name_response["output"]["display_name"]
+
                 return self._create_success_response(
-                    f"Priority for issue {args['issue_key']} is already set to {new_priority}. No update needed."
+                    f"Priority for issue {args['issue_key']} is already set to {new_priority}. No update needed.",
+                    issue_key=args["issue_key"],
+                    url=f"{self.jira_instance_url}/browse/{args['issue_key']}",
+                    reporter_display_name=reporter_display_name,
+                    summary=issue["fields"]["summary"],
+                    status=issue["fields"]["status"]["name"],
+                    priority=new_priority,
+                    issue_type=issue["fields"]["issuetype"]["name"],
+                    created=issue["fields"]["created"]
                 )
 
             # Update the priority
@@ -620,14 +644,23 @@ class JiraTool(BaseAgentTool):
             comment = f"Priority updated to {new_priority} on behalf of the reporter {reporter_email}."
             self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
-            issue_key = args["issue_key"]
+
+            # Get reporter display name for the response
+            reporter_display_name_response = self.find_user_display_name_by_account_id({"account_id": issue_reporter_account_id})
+            if reporter_display_name_response["output"]["action_status"] == "ko":
+                return reporter_display_name_response
+            reporter_display_name = reporter_display_name_response["output"]["display_name"]
 
             return self._create_success_response(
                 "Issue priority updated successfully",
-                issue_key=issue_key,
-                url=f"{self.jira_instance_url}/browse/{issue_key}",
+                issue_key=args["issue_key"],
+                url=f"{self.jira_instance_url}/browse/{args['issue_key']}",
+                reporter_display_name=reporter_display_name,
+                summary=issue["fields"]["summary"],
+                status=issue["fields"]["status"]["name"],
                 priority=new_priority,
-                issue=issue
+                issue_type=issue["fields"]["issuetype"]["name"],
+                created=issue["fields"]["created"]
             )
         except Exception as e:
             return self._create_error_response(f"Error updating issue {args['issue_key']} priority: {str(e)}")
@@ -647,14 +680,14 @@ class JiraTool(BaseAgentTool):
             # Find the accountId of the provided reporter email
             reporter_email = args["reporter"]
             reporter_response = self.find_user_account_id({"email": reporter_email})
-            if reporter_response["output"]["status"] == "ko":
+            if reporter_response["output"]["action_status"] == "ko":
                 return reporter_response
             reporter_account_id = reporter_response["output"]["account_id"]
             logger.debug(f"Reporter accountId: {reporter_account_id}")
 
             # Get the display name of the reporter
             display_name_response = self.find_user_display_name_by_account_id({"account_id": reporter_account_id})
-            if display_name_response["output"]["status"] == "ko":
+            if display_name_response["output"]["action_status"] == "ko":
                 return display_name_response
             reporter_display_name = display_name_response["output"]["display_name"]
             logger.debug(f"Reporter display name: {reporter_display_name}")
