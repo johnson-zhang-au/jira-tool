@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from tool import JiraTool
+from ..tool import JiraTool
 
 class TestJiraTool(unittest.TestCase):
     def setUp(self):

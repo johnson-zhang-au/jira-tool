@@ -349,8 +349,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Failed to find user with email {email}",
-                e,
-                email=email
+                e
             )
 
     def find_user_display_name_by_account_id(self, args):
@@ -428,8 +427,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error finding display name for email {email}",
-                e,
-                email=email
+                e
             )
 
     def create_issue(self, args):
@@ -507,9 +505,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error creating issue",
-                e,
-                reporter=args["reporter"],
-                summary=args["summary"]
+                e
             )
 
     def get_issue_by_key(self, args):
@@ -568,9 +564,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error retrieving issue by key {args['issue_key']}",
-                e,
-                issue_key=args["issue_key"],
-                reporter=args["reporter"]
+                e
             )
 
     def close_issue(self, args):
@@ -634,9 +628,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error closing issue {args['issue_key']}",
-                e,
-                issue_key=args["issue_key"],
-                reporter=args["reporter"]
+                e
             )
 
     def update_issue_priority(self, args):
@@ -706,11 +698,14 @@ class JiraTool(BaseAgentTool):
             priority_data = {"priority": {"name": new_priority}}
             issue = self.jira.issue_update(args["issue_key"], priority_data)
             logger.info(f"Issue priority updated successfully: {args['issue_key']}")
+            logger.debug(f"The returned issue detail after updating: {issue}")
 
             # Add a comment indicating the activity was done on behalf of the reporter
             comment = f"Priority updated to {new_priority} on behalf of the reporter {reporter_email}."
             self.jira.issue_add_comment(args["issue_key"], comment)
             logger.debug(f"Added comment to issue {args['issue_key']}: {comment}")
+            
+            issue = self.jira.issue(args["issue_key"])
 
             return self._create_success_response(
                 "Issue priority updated successfully",
@@ -726,10 +721,7 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error updating issue {args['issue_key']} priority",
-                e,
-                issue_key=args["issue_key"],
-                reporter=args["reporter"],
-                priority=new_priority
+                e
             )
 
     def get_issues_by_reporter(self, args):
@@ -788,7 +780,6 @@ class JiraTool(BaseAgentTool):
         except Exception as e:
             return self._create_error_response_with_traceback(
                 f"Error getting issues for reporter {args['reporter']}",
-                e,
-                reporter=args["reporter"]
+                e
             )
 
