@@ -2,7 +2,7 @@
     "id": "jira-tool",
     "meta": {
         "icon": "fas fa-phone",
-        "label": "Interact with Jira Issues"
+        "label": "Interact with Jira Issues (Community Edition)"
     },
     "params": [
         {
